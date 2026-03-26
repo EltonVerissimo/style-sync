@@ -1,13 +1,18 @@
+from bson import ObjectId
 from flask import Blueprint, jsonify, request
+from app.decorators import token_required
 from app.models.category import Category
 from app.models.users import LoginPayload
 from pydantic import ValidationError
+from app.models.category import *
 from app import db
 
 category_bp = Blueprint("category_bp", __name__)
 
+
 # RF: O sitema deve permitir o cadastro de novas categorias
 @category_bp.route("/category", methods=["POST"])
+@token_required
 def create_category(token):
     try:
         category = Category(**request.get_json())
@@ -18,22 +23,45 @@ def create_category(token):
 
     return jsonify({"message": "Category created", "id": str(result.inserted_id)}), 201
 
-# RF: O sitema deve permitir a deleção de categorias
-@category_bp.route("/category/<int:category_id>", methods=["DELETE"])
-def delete_category(category_id):
-    return jsonify({"message": f"Delete category id: {category_id}"})
 
 # RF: O sitema deve permitir a alterar os dados da categoria
-@category_bp.route("/category/<int:category_id>", methods=["PUT"])
-def update_category(category_id):
-    return jsonify({"message": f"Update category id: {category_id}"})
+@category_bp.route("/category/<string:category_id>", methods=["PUT"])
+@token_required
+def update_category(token, category_id):
+    try:
+        oid = ObjectId(category_id)
+        update_data = UpdateCategory(**request.get_json())
+
+    except ValidationError as e:
+        return jsonify({"error": e.errors()})
+
+    update_result = db.categories.update_one(
+        {"_id": oid}, {"$set": update_data.model_dump(exclude_unset=True)}
+    )
+
+    if update_result.matched_count == 0:
+        return jsonify({"error": "Category not found!"}), 404
+
+    updated_category = db.categories.find_one({"_id": oid})
+
+    return jsonify(
+        CategoryDBModel(**updated_category).model_dump(by_alias=True, exclude=None)
+    )
+
 
 # RF: O sitema deve permitir a leitura de todas as categorias
 @category_bp.route("/category", methods=["GET"])
 def get_categories():
     return jsonify({"message": "List categories"})
 
+
 # RF: O sitema deve permitir a pesquisa de categorias
 @category_bp.route("/category/<string:category>", methods=["GET"])
 def get_category_by_name(category):
     return jsonify({"message": f"Category: {category}"})
+
+
+# RF: O sitema deve permitir a deleção de categorias
+@category_bp.route("/category/<int:category_id>", methods=["DELETE"])
+def delete_category(category_id):
+    return jsonify({"message": f"Delete category id: {category_id}"})

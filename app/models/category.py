@@ -1,8 +1,10 @@
-from pydantic import BaseModel, ConfigDict
+from bson import ObjectId
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional
 
 
 class Category(BaseModel):
+    id: Optional[ObjectId] = Field(None, alias='_id')
     name: str
     description: Optional[str] = None
 
@@ -17,6 +19,6 @@ class CategoryDBModel(Category):
 
         return data
     
-class UpdateProduct(BaseModel):
+class UpdateCategory(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
