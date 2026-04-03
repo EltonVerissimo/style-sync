@@ -51,17 +51,46 @@ def update_category(token, category_id):
 
 # RF: O sitema deve permitir a leitura de todas as categorias
 @category_bp.route("/category", methods=["GET"])
-def get_categories():
-    return jsonify({"message": "List categories"})
+@token_required
+def get_categories(token):
+    categories_cursor = db.categories.find({})
+    categories_list = [
+        CategoryDBModel(**category).model_dump(by_alias=True, exclude_none=True)
+        for category in categories_cursor
+    ]
+
+    return jsonify(categories_list)
 
 
 # RF: O sitema deve permitir a pesquisa de categorias
-@category_bp.route("/category/<string:category>", methods=["GET"])
-def get_category_by_name(category):
-    return jsonify({"message": f"Category: {category}"})
+@category_bp.route("/category/search/<string:category_name>", methods=["GET"])
+@token_required
+def get_category_by_name(token, category_name):
+    categories = db.categories.find({"name": category_name})
+
+    if not categories:
+        categories_list = [
+            CategoryDBModel(**category).model_dump(by_alias=True, exclude_none=True)
+            for category in categories
+        ]
+
+        return jsonify(categories_list)
+    else:
+        return jsonify({"message": f"Category not found!"})
 
 
 # RF: O sitema deve permitir a deleção de categorias
-@category_bp.route("/category/<int:category_id>", methods=["DELETE"])
-def delete_category(category_id):
-    return jsonify({"message": f"Delete category id: {category_id}"})
+@category_bp.route("/category/<string:category_id>", methods=["DELETE"])
+@token_required
+def delete_category(token, category_id):
+    try:
+        oid = ObjectId(category_id)
+    except:
+        return jsonify({"error": "id category error"}), 400
+
+    delete_category = db.categories.delete_one({"_id": oid})
+
+    if delete_category.deleted_count == 0:
+        return jsonify({"error": "Category not found"}), 404
+
+    return "", 204
