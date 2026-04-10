@@ -20,8 +20,8 @@ def create_app():
     from .routes.category_routes import category_bp
     app.register_blueprint(category_bp)
 
-    from .routes.products_routes import category_bp
-    app.register_blueprint(category_bp)
+    from .routes.products_routes import products_bp
+    app.register_blueprint(products_bp)
 
     from .routes.user_routes import user_bp
     app.register_blueprint(user_bp)
